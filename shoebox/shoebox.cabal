@@ -13,7 +13,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     DatabaseParser, Shoebox,
-                       ShoeboxSampleDatabase
+                       ShoeboxSampleDatabase, UI
   build-depends:       base >=4.8 && <4.9
                      , containers
                      , hspec
@@ -22,6 +22,7 @@ library
                      , parsec
                      , time
                      , process
+                     , hsqml
   hs-source-dirs:      src
   default-language:    Haskell2010
 
@@ -31,6 +32,7 @@ executable shoebox
                        shoebox
   hs-source-dirs:      main
   default-language:    Haskell2010
+  ghc-options:         -threaded
 
 test-suite specs
   type:                exitcode-stdio-1.0
