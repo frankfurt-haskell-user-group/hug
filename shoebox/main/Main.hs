@@ -1,6 +1,9 @@
 module Main (main) where
 
-import UI
+import Yesod
+import GUI
 
 main :: IO ()
-main = startUI
+main = do
+	shoeDB <- readFrenchDB
+	warp 3000 (ShoeWeb shoeDB)
