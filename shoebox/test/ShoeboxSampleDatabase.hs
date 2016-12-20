@@ -2,7 +2,7 @@
 module ShoeboxSampleDatabase where
 
 import qualified Data.Map as M
-import           Shoebox
+import           Shoebox.Data
 
 shoeDB :: ShoeDB
 shoeDB = (shoeLexiconDB, shoeSuffixDB, shoePrefixDB, shoeSegmentationDB)

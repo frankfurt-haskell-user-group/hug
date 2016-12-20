@@ -2,7 +2,8 @@
 module ShoeboxSpec(main, spec) where
 
 import Test.Hspec
-import Shoebox
+import Shoebox.Data
+import Shoebox.Basics
 import ShoeboxSampleDatabase
 import Data.Typeable
 --import Data.UUID
