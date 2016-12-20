@@ -3,7 +3,10 @@
 module GUI where
 
     import Yesod
-    import Shoebox
+    import Shoebox.Data
+    import Shoebox.Basics
+    import Shoebox.Parser
+
     import qualified Data.Text as T
     import Data.Typeable
     import Data.Data
@@ -14,23 +17,6 @@ module GUI where
     data ShoeWeb = ShoeWeb ShoeDB
 
     instance Yesod ShoeWeb
-
-    deriving instance Typeable Morpheme
-    deriving instance Data Morpheme
-    deriving instance Typeable MorphemeBreak
-    deriving instance Data MorphemeBreak
-    deriving instance Typeable ShoeDB
-    deriving instance Data ShoeDB
-    deriving instance Typeable TextLine
-    deriving instance Data TextLine
-    deriving instance Typeable GlossLine
-    deriving instance Data GlossLine
-    deriving instance Typeable Choice
-    deriving instance Data Choice
-    deriving instance Typeable Gloss
-    deriving instance Data Gloss
-    deriving instance Typeable InterlinearBlock
-    deriving instance Data InterlinearBlock
 
     mkYesod "ShoeWeb" [parseRoutes|
       / HomeR GET
