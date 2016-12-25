@@ -26,7 +26,13 @@ executable shoe
                      , shoebox
                      , text
                      , yesod
+                     , shakespeare
                      , aeson
+                     , directory
+                     , filepath
+                     , strict
+                     , split
+                     , containers
   other-modules:       GUI
   hs-source-dirs:      main
   default-language:    Haskell2010
