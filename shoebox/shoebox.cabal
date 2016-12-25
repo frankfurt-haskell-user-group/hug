@@ -29,6 +29,8 @@ executable shoe
                      , shakespeare
                      , aeson
                      , directory
+                     , filepath
+                     , strict
                      , split
                      , containers
   other-modules:       GUI

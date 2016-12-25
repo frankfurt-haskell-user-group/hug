@@ -3,9 +3,10 @@ module Main (main) where
 import Yesod
 import GUI
 import Data.IORef
+import Data.Maybe
 
 main :: IO ()
 main = do
-	shoeDB <- loadDB "French"
-	ref <- newIORef shoeDB
+	shoeDB <- openFile "frz"
+	ref <- newIORef (fromJust shoeDB)
 	warp 3000 (ShoeWeb ref)

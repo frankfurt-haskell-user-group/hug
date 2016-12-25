@@ -15,9 +15,14 @@ module GUI where
     import Data.IORef
     import Data.Maybe
 
-    import System.Directory
+    import System.Directory (getDirectoryContents)
+    import System.FilePath (dropExtension, takeBaseName)
     import Data.List.Split (splitOn)
+    import qualified System.IO.Strict as S
     import qualified Data.Map as M
+
+    import Control.Exception (catch, SomeException)
+
 
 -- setup basic types and routes
 
@@ -28,7 +33,7 @@ module GUI where
     mkYesod "ShoeWeb" [parseRoutes|
       / HomeR GET
       /databases DatabasesR GET
-      /database/#T.Text DatabaseR GET POST DELETE
+      /database/#T.Text DatabaseR GET POST
       /script/#T.Text ScriptR GET
       /script/images/#T.Text ImagesR GET
       /query/#T.Text QueryR GET
@@ -64,6 +69,7 @@ module GUI where
                     <div data-options="region:'west',split:true" style="width:150px;height:100%;">
                         <div id="mm" class="easyui-menu" data-options="inline:true" style="width:100%;">
                             <div onclick="$('#dlgOpen').dialog('open')"">Open
+                            <div onclick="$('#dlgImport').dialog('open')"">Import
                             <div data-options="iconCls:'icon-save'" onclick="$('#dlgSave').dialog('open')">Save
                             <div onclick="$('#dlgAbout').dialog('open')">About
 
@@ -71,10 +77,26 @@ module GUI where
                             Shoebox Program (c) 2017 by Frankfurt Haskell User Group
 
                         <div id="dlgOpen" class="easyui-dialog" title="Open Database" style="width:400px;height:200px;padding:10px;" data-options="modal:true,closed:true">
-                            Open File Dialog
+                            <p>
+                            Refresh file list: 
+                            <button class="easyui-linkbutton" data-options="iconCls:'icon-reload'" onclick="updateFiles()" style="width:80px">Reload</button>
+                            <p>
+                            Select File, to open: 
+                            <input #openCombo class="easyui-combobox" data-options="onChange:openFile">
+                            <p>
+                            <div #openResult>
+
+                        <div id="dlgImport" class="easyui-dialog" title="Import Shoebox File" style="width:400px;height:200px;padding:10px;" data-options="modal:true,closed:true">
+                            Import existing shoebox data file:<p>
+                            <input #importFile class="easyui-filebox" style="width:300px" data-options="prompt:'Choose Shoebox File',accept:'*.u8',onChange:importFile">
+                            <div #resultImportFile>
 
                         <div id="dlgSave" class="easyui-dialog" title="Save" style="width:400px;height:200px;padding:10px;" data-options="modal:true,closed:true">
-                            Save File Dialog
+                            <p>
+                            Sure to save data: 
+                            <button class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveFile()" style="width:80px">Save</button>
+                            <p>
+                            <div #saveResult>
 
                     <div data-options="region:'center'">
                         <div id="tt" class="easyui-tabs" style="width:100%;height:100%;">
@@ -109,55 +131,64 @@ module GUI where
                 }
             }
 
-        |]
-
--- OLD
-
-
-    databaseWidget :: Widget
-    databaseWidget = do
-        toWidget [julius|
-            $(function () {
-                var dbselect = $().w2field("list", {name: "dbselect"});
-                $.ajax({
-                    method: "GET",
-                    url: ("/databases"),
-                    headers: {          
-                        Accept: "application/json",         
+            function importFile(fname) {
+                $.get("/database/" + fname, function(result) {
+                        if (result) {
+                            $("#resultImportFile").html("<b>successfully</b> imported data!");
+                            $("#file").html("opened file: <b>" + fname + "</b>");
+                        } else {
+                            $("#resultImportFile").html("<b>error occurred</b> during import of data!");
                         }
-                })
-                  .done(function( msg ) {
+                    });
+            }
 
-                        var options = []; 
-                        for (i = 0; i < msg.length; i++) {
-                            dbselect.items.push(msg[i]);
+            function openFile(fname, oldValue) {
+                $("#openResult").html("");
+                $.get("/database/" + fname, function(result) {
+                        if (result) {
+                            $("#openResult").html("<b>successfully</b> imported data!");
+                            $("#file").html("opened file: <b>" + fname + "</b>");
+                        } else {
+                            $("#openResult").html("<b>error occurred</b> during import of data!");
                         }
-                        dbselect.change = function( event, ui ) {
-                                    $.ajax({
-                                        method: "GET",
-                                        url: ("/database/" + $(this).val()),
-                                        headers: {          
-                                            Accept: "application/json",         
-                                            }
-                                    })
-                              }
-                  });
+                    });
+            }
 
-            });
-            |]
+            function saveFile() {
+                var inf = $("#file").html();
+                inf = inf.replace("opened file: <b>", "");
+                var fname = inf.replace("</b>", "");
 
+                $.post("/database/" + fname, function(result) {
+                        $("#saveResult").html("");
+                        console.log(result);
+                        if (result.length > 0) {
+                            $("#saveResult").html("<b>successfully</b> saved data!");
+                            $("#file").html("opened file: <b>" + result + "</b>");
+                        } else {
+                            $("#saveResult").html("<b>error occurred</b> during save data!");
+                        }
+                    });
+            }
 
-    browseWidget :: Widget
-    browseWidget = do
-        toWidget [hamlet|
-            browse content here
+            function updateFiles() {
+                $.get("/databases", function(result) {
+                        if (result) {
+                            var newData = [];
+                            for(var i = 0; i < result.length; i++) {
+                                var opt = result[i];
+                                newData.push({value:opt, text:opt});
+                            };
+                            $("#openCombo").combobox("loadData", newData);
+                        } else {
+                        }
+                    });
+            }
+
+            $(function(){updateFiles();});
+
         |]
 
-    interlinearWidget :: Widget
-    interlinearWidget = do
-        toWidget [hamlet|
-            interlinearisation content here
-        |]
 
 -- LOGIC
 -- -----
@@ -181,50 +212,52 @@ module GUI where
                 |]
 
 
--- OLD
+    -- data file handling, 
+    --  all data files are in "data"
+    --  
 
+    -- dbFiles - gives back a list of existing db files from "data" 
+    dbFiles :: IO [String]
+    dbFiles = do
+        -- first check files in data, with db extension
+        files <- getDirectoryContents "data"
+        let dbs = (filter isSbx files)
+        return dbs
 
-    -- file handling
+    -- open file, create file, save file
+    openFile :: String -> IO (Maybe ShoeDB)
+    openFile fname = do
+        catchAny (do
+            if isSbx fname 
+                then do
+                    readData <- S.readFile $ "data/" ++ fname
+                    return (Just (read readData))
+                else do
+                    db' <- loadShoeDB $ "data/" ++ (dropExtension fname)
+                    return (Just db')
+                    ) $ \e -> return Nothing
 
-    historicDBs = M.fromList [("French", "frz")]
+    -- save file under name, with sbx extension
+    saveFile :: String -> ShoeDB -> IO String
+    saveFile fname db = do
+        let writeName = if isSbx fname 
+                            then fname 
+                            else ((takeBaseName fname) ++ ".sbx")
+        catchAny (do
+                writeFile ("data/" ++ writeName) (show db)
+                return writeName) $ \e -> return ""
 
-    loadHistoricDB dbName = case M.lookup dbName historicDBs of
-        Just fn -> do
-            db <- loadShoeDB $ "data/" ++ fn
-            return $ Just db
-        Nothing -> return Nothing
-
+    -- file handling helpers
     isSbx :: String -> Bool
     isSbx name = case reverse (splitOn "." name) of 
         (x:xs) -> x == "sbx"
         _ -> False
 
-    otherDBs :: IO [String]
-    otherDBs = do
-        files <- getDirectoryContents "data"
-        let dbs = filter isSbx files
-        return dbs
+    historicDBs = M.fromList [("French", "frz")]
 
-    allDBs = do
-        news <- otherDBs
-        let olds = M.keys historicDBs
-        return (news ++ olds)
+    catchAny :: IO a -> (SomeException -> IO a) -> IO a
+    catchAny = Control.Exception.catch
 
-    loadDB name = do
-        -- first check history
-        db <- loadHistoricDB name
-        case db of
-            Just shoeDB -> return shoeDB
-            _ -> readDB name
-
-    readDB name = do
-        readData <- readFile $ "data/" ++ name
-        let reconstructed = read readData :: ShoeDB   
-        return reconstructed
-
-    writeDB name db = do
-        let writeName = if isSbx name then name else (name ++ ".sbx")
-        writeFile ("data/" ++ writeName) (show db)
 
 
 -- ROUTE HANDLER
@@ -255,38 +288,34 @@ module GUI where
         return $ ppIlb rval
 
 
-
--- OLD
-
-
     -- return names of all available databases
-    getDatabasesR :: Handler TypedContent
+    getDatabasesR :: Handler Value
     getDatabasesR = do
         liftIO $ print "getDatabases"
-        dbs <- liftIO allDBs
-        selectRep $ do
-            provideJson dbs
+        dbs <- liftIO dbFiles
+        return $ toJSON dbs
 
     -- set the actual database, load it
-    getDatabaseR :: T.Text -> Handler Html
-    getDatabaseR dbName = defaultLayout $ do
+    getDatabaseR :: T.Text -> Handler Value
+    getDatabaseR dbName = do
         liftIO $ print ("getDatabase: " ++ (T.unpack dbName))
         ShoeWeb ref <- getYesod
-        shoeDB <- liftIO $ loadDB (T.unpack dbName)
-        liftIO $ writeIORef ref shoeDB
-        [whamlet| |]
+        shoeDB <- liftIO $ openFile (T.unpack dbName)
+        case shoeDB of
+            Just db -> do
+                            liftIO $ writeIORef ref db
+                            return $ toJSON True
+            Nothing -> return $ toJSON False
 
     -- save the actual database back to the data
-    postDatabaseR :: T.Text -> Handler Html
-    postDatabaseR dbName = defaultLayout $ do
+    postDatabaseR :: T.Text -> Handler Value
+    postDatabaseR dbName = do
         liftIO $ print ("postDatabase: " ++ (T.unpack dbName))
         ShoeWeb ref <- getYesod
         shoeDB <- liftIO $ readIORef ref
-        liftIO $ writeDB (T.unpack dbName) shoeDB
-        [whamlet| |]
+        f <- liftIO $ saveFile (T.unpack dbName) shoeDB
+        return (toJSON f)
 
-    deleteDatabaseR :: T.Text -> Handler Html
-    deleteDatabaseR db = defaultLayout [whamlet| <h1>cool |]
 
 
 
