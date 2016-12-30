@@ -7,6 +7,6 @@ import Data.Maybe
 
 main :: IO ()
 main = do
-	shoeDB <- openFile "frz"
+	shoeDB <- openFile "frz.sbx"
 	ref <- newIORef (fromJust shoeDB)
 	warp 3000 (ShoeWeb ref)

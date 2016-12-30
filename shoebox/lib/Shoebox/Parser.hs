@@ -7,10 +7,11 @@ module Shoebox.Parser (
 import           Data.Monoid ((<>))
 import           Text.Parsec (Parsec)
 import qualified Text.Parsec as P
-import qualified Data.Text.IO as T
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as EN
 import           Data.Text (Text)
 import qualified Data.Map as M
+import qualified Data.ByteString as BS
 
 import Shoebox.Data
 
@@ -249,9 +250,11 @@ parseSegDB dbTxt = let
 
 parseDBFile :: (Text -> a) -> FilePath -> IO a
 parseDBFile parseF file = do
-  dbTxt <- T.readFile file
-  return $ parseF dbTxt
-
+  dbTxt <- BS.readFile file
+  let dbTxt2 = EN.decodeUtf8 dbTxt
+  -- since we read binary, we need to care for /r ourselves
+  let dbTxt3 = T.replace (T.pack "\r\n") (T.pack "\n") dbTxt2
+  return $ parseF dbTxt3
 
 
 segEntryToMorphemeBreak :: SegEntry -> [MorphemeBreak]
