@@ -37,6 +37,14 @@ module GUI where
       /script/#T.Text ScriptR GET
       /script/images/#T.Text ImagesR GET
       /query/#T.Text QueryR GET
+
+      -- data queries
+      /lexicon AllLexR GET
+      /lexicon/#T.Text LexR GET
+
+      /suffix AllSuffR GET
+      /prefix AllPreR GET
+      /seg AllSegR GET
     |]
 
 --    import Yesod.Core.Widget
@@ -59,49 +67,33 @@ module GUI where
 
         toWidget [hamlet|
 
-            <body style="padding:0px;">
-                <div id="cc" class="easyui-layout" style="width:100%;height:600px;padding:0px;">
+            <body style="padding:0px;overflow:hidden;height:800px">
+                <div id="cc" class="easyui-layout" style="width:100%;height:100%;padding:0px;">
 
-                    <div data-options="region:'north', title:'The Cool Shoebox Program'" style="height:50px;">
-                        <div #file>
-                            opened file: <b>French</b>
+                    <div data-options="region:'north'" style="width:100%; height:50px;">
 
-                    <div data-options="region:'west',split:true" style="width:150px;height:100%;">
-                        <div id="mm" class="easyui-menu" data-options="inline:true" style="width:100%;">
+                        <a href="#" class="easyui-menubutton" data-options="menu:'#mm1',iconCls:'icon-save'">File
+                        <div id="mm1" class="easyui-menu">
                             <div onclick="$('#dlgOpen').dialog('open')"">Open
                             <div onclick="$('#dlgImport').dialog('open')"">Import
-                            <div data-options="iconCls:'icon-save'" onclick="$('#dlgSave').dialog('open')">Save
+                            <div onclick="$('#dlgSave').dialog('open')">Save
+
+                        <a href="#" class="easyui-menubutton" data-options="menu:'#mm2'">About
+                        <div id="mm2" class="easyui-menu">
                             <div onclick="$('#dlgAbout').dialog('open')">About
 
-                        <div id="dlgAbout" class="easyui-dialog" title="About" style="width:400px;height:200px;padding:10px;" data-options="modal:true,closed:true">
-                            Shoebox Program (c) 2017 by Frankfurt Haskell User Group
-
-                        <div id="dlgOpen" class="easyui-dialog" title="Open Database" style="width:400px;height:200px;padding:10px;" data-options="modal:true,closed:true">
-                            <p>
-                            Refresh file list: 
-                            <button class="easyui-linkbutton" data-options="iconCls:'icon-reload'" onclick="updateFiles()" style="width:80px">Reload</button>
-                            <p>
-                            Select File, to open: 
-                            <input #openCombo class="easyui-combobox" data-options="onChange:openFile">
-                            <p>
-                            <div #openResult>
-
-                        <div id="dlgImport" class="easyui-dialog" title="Import Shoebox File" style="width:400px;height:200px;padding:10px;" data-options="modal:true,closed:true">
-                            Import existing shoebox data file:<p>
-                            <input #importFile class="easyui-filebox" style="width:300px" data-options="prompt:'Choose Shoebox File',accept:'*.u8',onChange:importFile">
-                            <div #resultImportFile>
-
-                        <div id="dlgSave" class="easyui-dialog" title="Save" style="width:400px;height:200px;padding:10px;" data-options="modal:true,closed:true">
-                            <p>
-                            Sure to save data: 
-                            <button class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveFile()" style="width:80px">Save</button>
-                            <p>
-                            <div #saveResult>
-
-                    <div data-options="region:'center'">
-                        <div id="tt" class="easyui-tabs" style="width:100%;height:100%;">
+                    <div data-options="region:'center'" style="height:calc(100% - 100px);width:100%">
+                        <div id="tt" class="easyui-tabs">
                             <div title="Browse" style="padding:20px;display:none;">
-                                Browser
+                                <p>
+                                This is the database browser. Load the data with the button below and inspect details by clicking on a specific item.
+                                <p>
+                                <button class="easyui-linkbutton" onclick="loadBrowserData()" style="width:80px">Load Data</button>
+                                <p>
+                                <div #browserData class="easyui-datalist" title="Lexicon" data-options="onSelect:browserDataSelect" style="width:300px;height:300px">
+                                <p>
+                                <div class="easyui-panel" style="width:300px;height:200px;" #browserText>Details shown here, once selected
+
                             <div title="Interlinearisation" style="overflow:auto;padding:20px;display:none;">
                                 Interlinear
                             <div title="Query" style="display:none;">
@@ -114,42 +106,106 @@ module GUI where
                                 <input #queryText class="easyui-textbox" style="width:500px" data-options="onChange:sendQuery">
                                 <div #resultText style="font-size:90%;">
 
+                    <div data-options="region:'south', title:'The Cool Shoebox Program'" style="height:50px;">
+                        <div #file>
+                            opened file: <b>frz.sbx</b>
+
+                <div id="dlgAbout" class="easyui-dialog" title="About" style="width:400px;height:200px;padding:10px;" data-options="modal:true,closed:true">
+                    Shoebox Program (c) 2017 by Frankfurt Haskell User Group
+
+                <div id="dlgOpen" class="easyui-dialog" title="Open Database" style="width:400px;height:200px;padding:10px;" data-options="modal:true,closed:true">
+                    <p>
+                    Refresh file list: 
+                    <button class="easyui-linkbutton" data-options="iconCls:'icon-reload'" onclick="updateFiles()" style="width:80px">Reload</button>
+                    <p>
+                    Select File, to open: 
+                    <input #openCombo class="easyui-combobox" data-options="onChange:openFile">
+                    <p>
+                    <div #openResult>
+
+                <div id="dlgImport" class="easyui-dialog" title="Import Shoebox File" style="width:400px;height:200px;padding:10px;" data-options="modal:true,closed:true">
+                    Import existing shoebox data file:<p>
+                    <input #importFile class="easyui-filebox" style="width:300px" data-options="prompt:'Choose Shoebox File',accept:'*.u8',onChange:importFile">
+                    <div #resultImportFile>
+
+                <div id="dlgSave" class="easyui-dialog" title="Save" style="width:400px;height:200px;padding:10px;" data-options="modal:true,closed:true">
+                    <p>
+                    Sure to save data: 
+                    <button class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveFile()" style="width:80px">Save</button>
+                    <p>
+                    <div #saveResult>
+
         |]
 
 
         toWidget [julius|
 
+            function loadBrowserData() {
+                $("#browserText").contents().remove();
+
+                $.get("/lexicon", function(result) {
+                        if (result) {
+                            var newData = [];
+                            for(var i = 0; i < result.length; i++) {
+                                var opt = result[i];
+                                newData.push({value:opt, text:opt});
+                            };
+                            $("#browserData").datalist("loadData", newData);
+
+                        } else {
+                            $("#browserText").append("<b>error occurred</b> during data-load!");
+                        }
+                    });
+            }
+
+            function browserDataSelect(sel, row)
+            {
+                $("#browserText").contents().remove();
+
+                $.get("/lexicon/" + row.text, function(result) {
+                        if (result) {
+                            for(var i = 0; i < result.length; i++) {
+                                var opt = result[i];
+                                $("#browserText").append(opt + "<br>\n");
+                            };
+                        } else {
+                            $("#browserText").append("<b>error occurred</b> during selection data-load!");
+                        }
+                    });
+            }
+
             function sendQuery() {
                 qt = $('#queryText').val();
                 if (qt != "") {
                     $.get("/query/" + qt, function (msg) {
-                        $("#resultText > *").remove();
+                        $("#resultText").contents().remove();
                         $("#resultText").append(msg);
                       });
                 } else {
-                    $("#resultText > *").remove();
+                    $("#resultText").contents().remove();
                 }
             }
 
             function importFile(fname) {
+                $("#resultImportFile").contents().remove();
                 $.get("/database/" + fname, function(result) {
                         if (result) {
-                            $("#resultImportFile").html("<b>successfully</b> imported data!");
+                            $("#resultImportFile").append("<b>successfully</b> imported data!");
                             $("#file").html("opened file: <b>" + fname + "</b>");
                         } else {
-                            $("#resultImportFile").html("<b>error occurred</b> during import of data!");
+                            $("#resultImportFile").append("<b>error occurred</b> during import of data!");
                         }
                     });
             }
 
             function openFile(fname, oldValue) {
-                $("#openResult").html("");
+                $("#openResult").contents().remove();
                 $.get("/database/" + fname, function(result) {
                         if (result) {
-                            $("#openResult").html("<b>successfully</b> imported data!");
+                            $("#openResult").append("<b>successfully</b> imported data!");
                             $("#file").html("opened file: <b>" + fname + "</b>");
                         } else {
-                            $("#openResult").html("<b>error occurred</b> during import of data!");
+                            $("#openResult").append("<b>error occurred</b> during import of data!");
                         }
                     });
             }
@@ -160,13 +216,12 @@ module GUI where
                 var fname = inf.replace("</b>", "");
 
                 $.post("/database/" + fname, function(result) {
-                        $("#saveResult").html("");
-                        console.log(result);
+                        $("#saveResult").contents().remove();
                         if (result.length > 0) {
-                            $("#saveResult").html("<b>successfully</b> saved data!");
+                            $("#saveResult").append("<b>successfully</b> saved data!");
                             $("#file").html("opened file: <b>" + result + "</b>");
                         } else {
-                            $("#saveResult").html("<b>error occurred</b> during save data!");
+                            $("#saveResult").append("<b>error occurred</b> during save data!");
                         }
                     });
             }
@@ -185,7 +240,10 @@ module GUI where
                     });
             }
 
-            $(function(){updateFiles();});
+            $(function(){
+                updateFiles();
+                self.resizeTo(1000,840);
+                });
 
         |]
 
@@ -287,6 +345,44 @@ module GUI where
         let rval = concat (intl q shoeDB)
         return $ ppIlb rval
 
+    -- Lexicon part of database
+    getLexR :: T.Text -> Handler Value
+    getLexR q = do
+        ShoeWeb ref <- getYesod
+        (lexDB, _, _, _) <- liftIO $ readIORef ref
+        liftIO $ print $ "getLexR: " ++ (T.unpack q)
+        case M.lookup q lexDB of
+            Just val -> return (toJSON val)
+            Nothing -> notFound
+
+    -- Lexicon part of database
+    getAllLexR :: Handler Value
+    getAllLexR = do
+        ShoeWeb ref <- getYesod
+        (lexDB, _, _, _) <- liftIO $ readIORef ref
+        liftIO $ print "getAllLexR"
+        return (toJSON (M.keys lexDB))
+
+    -- Suffix part of database
+    getAllSuffR :: Handler Value
+    getAllSuffR = do
+        ShoeWeb ref <- getYesod
+        (_, _, suff, _) <- liftIO $ readIORef ref
+        return (toJSON suff)
+
+    -- Prefix part of database
+    getAllPreR :: Handler Value
+    getAllPreR = do
+        ShoeWeb ref <- getYesod
+        (_, pre, _, _) <- liftIO $ readIORef ref
+        return (toJSON pre)
+
+    -- Segmentation part of database
+    getAllSegR :: Handler Value
+    getAllSegR = do
+        ShoeWeb ref <- getYesod
+        (_, _, _, seg) <- liftIO $ readIORef ref
+        return (toJSON seg)
 
     -- return names of all available databases
     getDatabasesR :: Handler Value
