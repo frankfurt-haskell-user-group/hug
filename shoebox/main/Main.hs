@@ -1,12 +1,15 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main (main) where
 
 import Yesod
-import GUI
+import WebBackend
 import Data.IORef
 import Data.Maybe
+import Shoebox.Interface
 
 main :: IO ()
 main = do
-	shoeDB <- openFile "frz.sbx"
+	shoeDB <- shoeReadDB "frz"
 	ref <- newIORef (fromJust shoeDB)
 	warp 3000 (ShoeWeb ref)

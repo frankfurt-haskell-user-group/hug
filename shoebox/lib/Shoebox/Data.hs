@@ -43,4 +43,10 @@ instance ToJSON Choice
 instance ToJSON InterlinearBlock
 instance ToJSON TextLine
 
+instance FromJSON MorphemeBreak
+instance FromJSON Morpheme
+instance FromJSON GlossLine
+instance FromJSON Choice
+instance FromJSON InterlinearBlock
+instance FromJSON TextLine
 
